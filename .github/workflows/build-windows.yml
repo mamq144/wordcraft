@@ -1,0 +1,24 @@
+name: Build Windows App
+
+on:
+  push:
+    branches: [add-arabic-translation, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build wordcraft.exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build binary
+        run: cargo build --release -p wordcraft
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordcraft-windows
+          path: target/release/wordcraft.exe

@@ -122,10 +122,15 @@ impl Catalog {
         let (entries, errors) = parse_entries(text);
         let mut catalog = Catalog::default();
         for e in entries {
-            if e.context.is_empty() {
-                catalog.plain.insert(e.source, e.translation);
+            let display_text = if !e.translation.contains('{') && super::bidi::has_rtl(&e.translation) {
+                super::bidi::reorder(&e.translation).into_owned()
             } else {
-                catalog.contextual.insert((e.context, e.source), e.translation);
+                e.translation
+            };
+            if e.context.is_empty() {
+                catalog.plain.insert(e.source, display_text);
+            } else {
+                catalog.contextual.insert((e.context, e.source), display_text);
             }
         }
         (catalog, errors)

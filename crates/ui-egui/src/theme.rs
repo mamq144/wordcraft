@@ -571,6 +571,12 @@ pub fn font_definitions_language(prefer_hans: bool, prefer_korean: bool, system_
         data.index = f.index;
         add_cjk(&mut fonts, format!("system {}", f.family), data);
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(f) = system_arabic_font() {
+        let mut data = FontData::from_static(&f.bytes);
+        data.index = f.index;
+        add_cjk(&mut fonts, format!("system {}", f.family), data);
+    }
     #[cfg(target_arch = "wasm32")]
     let _ = system_cjk;
     // Symbols and emoji fall back to egui's defaults (kept in the families).
@@ -607,6 +613,13 @@ fn system_cjk_font(hans: bool, korean: bool) -> Option<&'static wordcraft_fonts:
         wordcraft_fonts::system_cjk_ui_font_for(hans, korean, &needed)
     })
     .as_ref()
+}
+
+/// The installed font for Arabic interface text, chosen once.
+#[cfg(not(target_arch = "wasm32"))]
+fn system_arabic_font() -> Option<&'static wordcraft_fonts::SystemUiFont> {
+    static AR: std::sync::OnceLock<Option<wordcraft_fonts::SystemUiFont>> = std::sync::OnceLock::new();
+    AR.get_or_init(wordcraft_fonts::system_arabic_ui_font).as_ref()
 }
 
 pub fn medium(size: f32) -> FontId {

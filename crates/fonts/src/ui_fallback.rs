@@ -153,6 +153,23 @@ pub fn system_cjk_ui_font_for(hans: bool, korean: bool, needed: &[char]) -> Opti
     find_ui_font(&with_asset_data(crate::system_font_dirs()), &candidates(hans, korean), needed, hans)
 }
 
+/// The installed font for Arabic interface text, if one is found.
+pub fn system_arabic_ui_font() -> Option<SystemUiFont> {
+    let candidates: &[&str] = if cfg!(windows) {
+        &["segoeui.ttf", "arial.ttf", "tahoma.ttf"]
+    } else if cfg!(target_os = "macos") {
+        &["/System/Library/Fonts/SFArabic.ttf", "/System/Library/Fonts/GeezaPro.ttc", "/System/Library/Fonts/Supplemental/Arial.ttf", "Arial.ttf"]
+    } else {
+        &[
+            "truetype/noto/NotoSansArabic-Regular.ttf",
+            "noto/NotoSansArabic-Regular.ttf",
+            "google-noto/NotoSansArabic-Regular.ttf",
+            "dejavu/DejaVuSans.ttf",
+        ]
+    };
+    find_ui_font(&with_asset_data(crate::system_font_dirs()), candidates, &['ع', 'ر', 'ب', 'ي'], false)
+}
+
 /// `dirs` and, for each macOS font asset folder among them (`com_apple_MobileAsset_Font<N>`),
 /// the `AssetData` folder of every `<hash>.asset` in it: macOS ships PingFang there, e.g.
 /// `/System/Library/AssetsV2/com_apple_MobileAsset_Font7/<hash>.asset/AssetData/PingFang.ttc`

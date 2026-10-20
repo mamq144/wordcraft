@@ -24,6 +24,8 @@ fn system_locales_map_to_languages() {
     assert_eq!(lang_from_tag("en-GB"), Some(Lang::EN));
     assert_eq!(lang_from_tag("C"), Some(Lang::EN));
     assert_eq!(lang_from_tag("POSIX"), Some(Lang::EN));
+    assert_eq!(lang_from_tag("ar-SA"), Some(lang("ar")));
+    assert_eq!(lang_from_tag("ar_EG.UTF-8"), Some(lang("ar")));
     assert_eq!(lang_from_tag("fr-FR"), Some(lang("fr")));
     assert_eq!(lang_from_tag(UNSUPPORTED), None);
     assert_eq!(lang_from_tag(""), None);
@@ -992,7 +994,7 @@ fn polish_covers_every_key_of_every_other_catalog() {
     // pieces of gallery labels. Polish matches every other catalog, including the built-in style
     // names, citation styles and equation gallery. French carries newer strings (paper sizes,
     // bookmarks, printing) the Polish catalog hasn't caught up with yet.
-    for other in Lang::all().filter(|l| *l != Lang::EN && !matches!(l.code(), "pl" | "it" | "hu" | "bg" | "vi" | "sv" | "hr" | "fr")) {
+    for other in Lang::all().filter(|l| *l != Lang::EN && !matches!(l.code(), "pl" | "it" | "hu" | "bg" | "vi" | "sv" | "hr" | "fr" | "ar")) {
         let mut missing: Vec<String> = keys(other.0.source).difference(&polish).cloned().collect();
         missing.sort();
         assert!(missing.is_empty(), "pl lacks {}'s {missing:?}", other.code());
@@ -1559,4 +1561,47 @@ fn bundled_interface_fonts_cover_vietnamese_letters() {
         }
     }
     assert!(!lang("vi").uses_cjk());
+}
+
+#[test]
+fn arabic_locales_and_saved_preference_work_without_changing_the_document() {
+    let ar = lang("ar");
+    for tag in ["ar", "ar-SA", "ar-EG", "ar-AE", "ar_SA.UTF-8", "AR-ar"] {
+        assert_eq!(lang_from_tag(tag), Some(ar), "{tag}");
+    }
+    assert_eq!(first_supported([UNSUPPORTED, "ar-SA", "en-US"]), Some(ar));
+    let mut app = crate::WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+    let before = serde_json::to_value(&app.session.doc).unwrap();
+    let result = app.run("ui.language", serde_json::json!({"value": "AR"})).unwrap();
+    assert_eq!(result["effective"], "ar");
+    assert_eq!(app.ui.language, "ar");
+    assert_eq!(serde_json::to_value(&app.session.doc).unwrap(), before);
+    assert_eq!(normalize_pref("ar"), Some("ar"));
+    assert_eq!(normalize_pref("AR"), Some("ar"));
+    assert_eq!(ar.name(), "العربية");
+}
+
+#[test]
+fn arabic_covers_the_entire_existing_interface_catalog() {
+    use std::collections::HashSet;
+    let keys = |source| parse_entries(source).0.into_iter().map(|e| e.source).collect::<HashSet<_>>();
+    assert!(keys(lang("ar").0.source).is_superset(&keys(lang("zh-hans").0.source)));
+    assert!(parse_entries(lang("ar").0.source).1.is_empty());
+    let ar = lang("ar");
+    assert_eq!(tr(ar, "File"), super::bidi::reorder("ملف"));
+    assert_eq!(tr(ar, "Home"), super::bidi::reorder("الشريط الرئيسي"));
+    assert_eq!(tr(ar, "Insert"), super::bidi::reorder("إدراج"));
+    assert_eq!(tr(ar, "Review"), super::bidi::reorder("مراجعة"));
+    assert_eq!(tr(ar, "Save"), super::bidi::reorder("حفظ"));
+    assert_eq!(tr(ar, "Insert Table"), super::bidi::reorder("إدراج جدول"));
+    assert!(tr(ar, "Type a command, e.g. \"insert table\"").contains("إدراج"));
+    assert!(tr(ar, "Type a command, e.g. \"insert table\"").contains("جدول"));
+    for count in [0, 1, 2, 5, 21, 100, 1000] {
+        let words = count.to_string();
+        assert_eq!(fmt(tr(ar, "{words} words"), &[("words", &words)]), super::bidi::reorder(&format!("الكلمات: {count}")));
+        assert_eq!(
+            fmt(tr(ar, "{selected} of {words} words"), &[("selected", "1"), ("words", &words)]),
+            super::bidi::reorder(&format!("الكلمات: 1 من {count}"))
+        );
+    }
 }
