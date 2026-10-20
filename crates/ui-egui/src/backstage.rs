@@ -325,9 +325,7 @@ fn home_page(app: &mut WordApp, ui: &mut Ui) {
             "Good evening"
         },
     );
-    let gallery_layout =
-        if crate::i18n::is_rtl() { egui::Layout::right_to_left(egui::Align::Min) } else { egui::Layout::left_to_right(egui::Align::Min) };
-    ui.with_layout(gallery_layout, |ui| {
+    ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing = vec2(18.0, 0.0);
         for (label, template) in TEMPLATES.into_iter().take(HOME_TEMPLATES) {
             template_tile(ui, app, label, template);
@@ -358,12 +356,7 @@ fn new_page(app: &mut WordApp, ui: &mut Ui) {
         ui.label(egui::RichText::new(tl!("No templates match your search.")).color(t.text_dim));
         return;
     }
-    let wrapped_layout = if crate::i18n::is_rtl() {
-        egui::Layout::right_to_left(egui::Align::Min).with_main_wrap(true)
-    } else {
-        egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true)
-    };
-    ui.with_layout(wrapped_layout, |ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(18.0, 18.0);
         for (label, template) in found {
             template_tile(ui, app, label, template);
