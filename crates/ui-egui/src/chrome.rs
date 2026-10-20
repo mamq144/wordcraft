@@ -275,9 +275,13 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                 let max = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!max));
             }
+            let is_rtl = crate::i18n::is_rtl();
+            let title_bar_layout =
+                if is_rtl { egui::Layout::right_to_left(egui::Align::Center) } else { egui::Layout::left_to_right(egui::Align::Center) };
+            let end_layout = if is_rtl { egui::Layout::left_to_right(egui::Align::Center) } else { egui::Layout::right_to_left(egui::Align::Center) };
             let mut qat_end = full.min.x;
             let mut right_start = full.max.x;
-            ui.horizontal_centered(|ui| {
+            ui.with_layout(title_bar_layout, |ui| {
                 ui.spacing_mut().item_spacing = vec2(2.0, 0.0);
                 // AutoSave switch: greyed out, with the reason as its tooltip, when AutoSave can't
                 // cover the document (#196, #176); clicking it then offers Save As where that helps.
@@ -315,7 +319,7 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                     quick_access(ui, app);
                 }
                 qat_end = ui.min_rect().max.x;
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.with_layout(end_layout, |ui| {
                     // Account / community.
                     let (r, resp) = ui.allocate_exact_size(vec2(control_h, control_h), Sense::click());
                     ui.painter().circle_filled(r.center(), control_h / 2.0 - 1.0, t.accent);
@@ -329,14 +333,19 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                     if app.ui.show_discord {
                         let (r, resp) = ui.allocate_exact_size(vec2(84.0, 22.0), Sense::click());
                         ui.painter().rect_filled(r, 11.0, if resp.hovered() { t.accent_text } else { t.accent });
+                        let (icon_x, text_x, align) = if is_rtl {
+                            (r.max.x - 13.0, r.max.x - 24.0, Align2::RIGHT_CENTER)
+                        } else {
+                            (r.min.x + 13.0, r.min.x + 24.0, Align2::LEFT_CENTER)
+                        };
                         icons::paint(
                             ui.painter(),
-                            Rect::from_center_size(pos2(r.min.x + 13.0, r.center().y), vec2(14.0, 14.0)),
+                            Rect::from_center_size(pos2(icon_x, r.center().y), vec2(14.0, 14.0)),
                             "discord",
                             t.on_accent,
                             t.on_accent,
                         );
-                        ui.painter().text(pos2(r.min.x + 24.0, r.center().y), Align2::LEFT_CENTER, tl!("Discord"), medium(11.5), t.on_accent);
+                        ui.painter().text(pos2(text_x, r.center().y), align, tl!("Discord"), medium(11.5), t.on_accent);
                         if resp.on_hover_text(tl!("Join the ArtCraft community on Discord")).clicked() {
                             let _ = app.run("ui.discord", json!({}));
                         }
@@ -345,9 +354,11 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                     // Search ("Tell me").
                     let (r, resp) = ui.allocate_exact_size(vec2(260.0, control_h), Sense::click());
                     ui.painter().rect(r, 6.0, if resp.hovered() { t.input } else { t.ribbon }, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
+                    let (s_icon_x, s_text_x, s_align) =
+                        if is_rtl { (r.max.x - 16.0, r.max.x - 30.0, Align2::RIGHT_TOP) } else { (r.min.x + 16.0, r.min.x + 30.0, Align2::LEFT_TOP) };
                     icons::paint(
                         ui.painter(),
-                        Rect::from_center_size(pos2(r.min.x + 16.0, r.center().y), vec2(16.0, 16.0)),
+                        Rect::from_center_size(pos2(s_icon_x, r.center().y), vec2(16.0, 16.0)),
                         "search",
                         t.text_dim,
                         t.accent,
@@ -357,8 +368,8 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                     let ptrack = TypeRung::Control.tracking();
                     paint_text(
                         ui.painter(),
-                        pos2(r.min.x + 30.0, r.center().y - TypeRung::Control.line_height() / 2.0),
-                        Align2::LEFT_TOP,
+                        pos2(s_text_x, r.center().y - TypeRung::Control.line_height() / 2.0),
+                        s_align,
                         ph,
                         &pfont,
                         ptrack,
@@ -442,7 +453,10 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
             if !app.has_document() {
                 return;
             }
-            ui.horizontal_centered(|ui| {
+            let is_rtl = crate::i18n::is_rtl();
+            let bar_layout = if is_rtl { egui::Layout::right_to_left(egui::Align::Center) } else { egui::Layout::left_to_right(egui::Align::Center) };
+            let zoom_layout = if is_rtl { egui::Layout::left_to_right(egui::Align::Center) } else { egui::Layout::right_to_left(egui::Align::Center) };
+            ui.with_layout(bar_layout, |ui| {
                 ui.spacing_mut().item_spacing = vec2(14.0, 0.0);
                 let l = app.session.layout();
                 let page = if app.session.selects_whole_story() {
@@ -455,7 +469,8 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                     let track = TypeRung::Caption.tracking();
                     let w = text_width(ui.painter(), s, &font, track, t.text_dim);
                     let (r, resp) = ui.allocate_exact_size(vec2(w + 1.0, TypeRung::Caption.line_height()), Sense::click());
-                    paint_text(ui.painter(), pos2(r.min.x, r.min.y), Align2::LEFT_TOP, s, &font, track, t.text_dim);
+                    let (pos, align) = if is_rtl { (pos2(r.max.x, r.min.y), Align2::RIGHT_TOP) } else { (pos2(r.min.x, r.min.y), Align2::LEFT_TOP) };
+                    paint_text(ui.painter(), pos, align, s, &font, track, t.text_dim);
                     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, s));
                     resp
                 };
@@ -520,7 +535,7 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                     paint_text(ui.painter(), pos2(ui.cursor().min.x, ui.cursor().min.y), Align2::LEFT_TOP, msg, &font, track, t.accent_text);
                     ui.allocate_space(vec2(text_width(ui.painter(), msg, &font, track, t.accent_text) + 1.0, TypeRung::Caption.line_height()));
                 }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.with_layout(zoom_layout, |ui| {
                     ui.spacing_mut().item_spacing = vec2(4.0, 0.0);
                     let reading = app.session.view.read_mode;
                     let z = (if reading { app.session.view.read_zoom } else { app.canvas.scale / crate::canvas::PX_PER_PT } * 100.0).round();

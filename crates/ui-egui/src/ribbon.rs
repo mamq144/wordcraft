@@ -331,7 +331,12 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     })
                     .collect();
                 let plan = plan_strip(&specs, button_levels, ui.available_width(), MORE_TABS_W + 2.0);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let is_rtl = crate::i18n::is_rtl();
+                let actions_layout =
+                    if is_rtl { egui::Layout::left_to_right(egui::Align::Center) } else { egui::Layout::right_to_left(egui::Align::Center) };
+                let tabs_layout =
+                    if is_rtl { egui::Layout::right_to_left(egui::Align::Center) } else { egui::Layout::left_to_right(egui::Align::Center) };
+                ui.with_layout(actions_layout, |ui| {
                     // No document open (#1129): nothing to share, edit or comment on — but only
                     // these buttons. Disabling the whole line took the tab strip with it: the
                     // tabs took clicks that did nothing, so the empty window had no way back to
@@ -341,7 +346,13 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                             if plan.buttons < 2 { (((share_w + 36.0).max(74.0), 24.0), true) } else { ((30.0, 24.0), false) };
                         let (r, resp) = ui.allocate_exact_size(vec2(share_size.0, share_size.1), Sense::click());
                         ui.painter().rect_filled(r, 4.0, if resp.hovered() { t.accent_text } else { t.accent });
-                        let icon_x = if share_text { r.min.x + 14.0 } else { r.center().x };
+                        let icon_x = if !share_text {
+                            r.center().x
+                        } else if is_rtl {
+                            r.max.x - 14.0
+                        } else {
+                            r.min.x + 14.0
+                        };
                         icons::paint(
                             ui.painter(),
                             Rect::from_center_size(pos2(icon_x, r.center().y), vec2(14.0, 14.0)),
@@ -350,7 +361,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                             t.on_accent,
                         );
                         if share_text {
-                            ui.painter().text(pos2(r.min.x + 26.0, r.center().y), Align2::LEFT_CENTER, share, medium(12.0), t.on_accent);
+                            let (text_x, align) = if is_rtl { (r.max.x - 26.0, Align2::RIGHT_CENTER) } else { (r.min.x + 26.0, Align2::LEFT_CENTER) };
+                            ui.painter().text(pos2(text_x, r.center().y), align, share, medium(12.0), t.on_accent);
                         }
                         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, share));
                         if resp.on_hover_text(tl!("Export a copy to share (PDF, Word document)")).clicked() {
@@ -384,7 +396,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                         }
                     });
                     ui.add_space(8.0);
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                    ui.with_layout(tabs_layout, |ui| {
                         // The tabs that don't fit go into a » menu at the end of the strip (#897, #2026).
                         for (i, ((tab, custom), _)) in tabs.iter().zip(&plan.fits).enumerate().filter(|(_, (_, fits))| **fits) {
                             let (tab, custom) = (tab.as_str(), *custom);
@@ -492,7 +504,9 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             let entry = user_tabs.iter().find(|e| e.name == app.ui.tab);
             crate::ribbon_fit::begin(ui.ctx(), &app.ui.tab, ui.available_width() - 4.0);
             let scroll = egui::ScrollArea::horizontal().scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden).show(ui, |ui| {
-                ui.horizontal_top(|ui| {
+                let groups_layout =
+                    if crate::i18n::is_rtl() { egui::Layout::right_to_left(egui::Align::Min) } else { egui::Layout::left_to_right(egui::Align::Min) };
+                ui.with_layout(groups_layout, |ui| {
                     ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
                     match entry {
                         // Every tab hidden: nothing to show.

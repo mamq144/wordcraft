@@ -470,7 +470,8 @@ fn title_row(ui: &mut Ui, r: Rect, id_title: &str, title: &str, launcher: Option
     let title_y = r.center().y;
     ui.painter().text(pos2(r.center().x, title_y), Align2::CENTER_CENTER, title, regular(11.0), t.group_label);
     if let Some(cmd) = launcher {
-        let lr = Rect::from_center_size(pos2(r.max.x - 6.0, title_y), vec2(11.0, 11.0));
+        let lx = if crate::i18n::is_rtl() { r.min.x + 6.0 } else { r.max.x - 6.0 };
+        let lr = Rect::from_center_size(pos2(lx, title_y), vec2(11.0, 11.0));
         let resp = ui.interact(lr, ui.id().with(("launch", id_title)), Sense::click());
         if resp.hovered() {
             ui.painter().rect_filled(lr.expand(2.0), 2.0, t.hover);

@@ -229,6 +229,11 @@ impl Lang {
         self.0.name.chars().any(|c| ('\u{2E80}'..='\u{9FFF}').contains(&c) || ('\u{AC00}'..='\u{D7AF}').contains(&c))
     }
 
+    /// Whether this interface language uses right-to-left layout and text direction.
+    pub fn is_rtl(self) -> bool {
+        self.0.code == "ar"
+    }
+
     /// The CJK interface text the fonts must cover with the Chinese (`hans`) or other CJK fallback
     /// order: the catalogs of the CJK languages using that order, and every language's own name (the
     /// Options list). The interface fonts check the embedded faces against it (#486).
@@ -351,6 +356,11 @@ pub fn set_current(lang: Lang) {
 /// The language the UI is drawn in.
 pub fn current() -> Lang {
     CURRENT.get()
+}
+
+/// True when the current thread's active interface language uses right-to-left direction.
+pub fn is_rtl() -> bool {
+    current().is_rtl()
 }
 
 /// Does `lang` have a catalog entry for this string? (English never does: it is the source.)

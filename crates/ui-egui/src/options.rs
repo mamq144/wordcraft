@@ -111,7 +111,9 @@ pub fn page(app: &mut WordApp, ui: &mut Ui) {
     ui.label(RichText::new(tl!("Options")).font(semibold(26.0)));
     ui.add_space(16.0);
     let current = if PANES.contains(&app.ui.options_pane.as_str()) { app.ui.options_pane.clone() } else { "general".to_string() };
-    ui.horizontal_top(|ui| {
+    let is_rtl = crate::i18n::is_rtl();
+    let options_layout = if is_rtl { egui::Layout::right_to_left(egui::Align::Min) } else { egui::Layout::left_to_right(egui::Align::Min) };
+    ui.with_layout(options_layout, |ui| {
         ui.vertical(|ui| {
             ui.set_width(170.0);
             for id in PANES {
@@ -126,7 +128,8 @@ pub fn page(app: &mut WordApp, ui: &mut Ui) {
                 }
                 let font = if active { semibold(14.0) } else { crate::theme::regular(14.0) };
                 // Long translations stay inside the row; WidgetInfo above keeps the full name.
-                ui.painter().with_clip_rect(r).text(egui::pos2(r.min.x + 12.0, r.center().y), egui::Align2::LEFT_CENTER, label, font, t.text);
+                let (text_x, align) = if is_rtl { (r.max.x - 12.0, egui::Align2::RIGHT_CENTER) } else { (r.min.x + 12.0, egui::Align2::LEFT_CENTER) };
+                ui.painter().with_clip_rect(r).text(egui::pos2(text_x, r.center().y), align, label, font, t.text);
                 if resp.clicked() {
                     app.ui.options_pane = id.to_string();
                 }

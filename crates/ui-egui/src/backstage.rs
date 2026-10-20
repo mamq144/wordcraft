@@ -38,7 +38,9 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         app.ui.backstage_page = "home".into();
     }
     let mac = app.integrated_titlebar;
-    egui::Panel::left("backstage_nav")
+    let is_rtl = crate::i18n::is_rtl();
+    let nav_panel = if is_rtl { egui::Panel::right("backstage_nav") } else { egui::Panel::left("backstage_nav") };
+    nav_panel
         .exact_size(200.0)
         // Fixed width, as in Word: without this egui shows a resize handle that does nothing (#502).
         .resizable(false)
@@ -60,14 +62,21 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 // The chevron's stroke starts at the content edge.
                 let c = back_chevron_c(band.min.x, band.center().y, app.session.view.full_screen, app.mac_titlebar.content_left);
                 let resp = ui.interact(Rect::from_center_size(c, vec2(22.0, band.height())), ui.id().with("backstage_back"), Sense::click());
-                icons::paint(ui.painter(), Rect::from_center_size(c, vec2(18.0, 18.0)), "chevronLeft", egui::Color32::WHITE, egui::Color32::WHITE);
+                icons::paint(
+                    ui.painter(),
+                    Rect::from_center_size(c, vec2(18.0, 18.0)),
+                    if is_rtl { "chevronRight" } else { "chevronLeft" },
+                    egui::Color32::WHITE,
+                    egui::Color32::WHITE,
+                );
                 resp
             } else {
                 let (r, resp) = ui.allocate_exact_size(vec2(200.0, 40.0), Sense::click());
+                let (chev_x, chev_icon) = if is_rtl { (r.max.x - 26.0, "chevronRight") } else { (r.min.x + 26.0, "chevronLeft") };
                 icons::paint(
                     ui.painter(),
-                    Rect::from_center_size(pos2(r.min.x + 26.0, r.center().y), vec2(18.0, 18.0)),
-                    "chevronLeft",
+                    Rect::from_center_size(pos2(chev_x, r.center().y), vec2(18.0, 18.0)),
+                    chev_icon,
                     egui::Color32::WHITE,
                     egui::Color32::WHITE,
                 );
@@ -91,14 +100,13 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     ui.painter().rect_filled(r, 0.0, egui::Color32::from_white_alpha(26));
                 }
                 let ink = if on { egui::Color32::WHITE } else { egui::Color32::from_white_alpha(110) };
-                icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 31.0, r.center().y), vec2(18.0, 18.0)), icon, ink, ink);
-                ui.painter().text(
-                    pos2(r.min.x + 52.0, r.center().y),
-                    Align2::LEFT_CENTER,
-                    tl!(label),
-                    if active { semibold(14.0) } else { medium(14.0) },
-                    ink,
-                );
+                let (icon_x, text_x, align) = if is_rtl {
+                    (r.max.x - 31.0, r.max.x - 52.0, Align2::RIGHT_CENTER)
+                } else {
+                    (r.min.x + 31.0, r.min.x + 52.0, Align2::LEFT_CENTER)
+                };
+                icons::paint(ui.painter(), Rect::from_center_size(pos2(icon_x, r.center().y), vec2(18.0, 18.0)), icon, ink, ink);
+                ui.painter().text(pos2(text_x, r.center().y), align, tl!(label), if active { semibold(14.0) } else { medium(14.0) }, ink);
                 if resp.clicked() {
                     match id {
                         // A document without a file goes to the Save As page (as in Word) instead
@@ -135,7 +143,9 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     if resp.hovered() {
                         ui.painter().rect_filled(r, 0.0, egui::Color32::from_white_alpha(26));
                     }
-                    ui.painter().text(pos2(r.min.x + 22.0, r.center().y), Align2::LEFT_CENTER, tl!(label), regular(13.0), egui::Color32::WHITE);
+                    let text_x = if is_rtl { r.max.x - 22.0 } else { r.min.x + 22.0 };
+                    let align = if is_rtl { Align2::RIGHT_CENTER } else { Align2::LEFT_CENTER };
+                    ui.painter().text(pos2(text_x, r.center().y), align, tl!(label), regular(13.0), egui::Color32::WHITE);
                     if resp.clicked() {
                         if id == "discord" {
                             let _ = app.run("ui.discord", json!({}));
@@ -315,7 +325,9 @@ fn home_page(app: &mut WordApp, ui: &mut Ui) {
             "Good evening"
         },
     );
-    ui.horizontal(|ui| {
+    let gallery_layout =
+        if crate::i18n::is_rtl() { egui::Layout::right_to_left(egui::Align::Min) } else { egui::Layout::left_to_right(egui::Align::Min) };
+    ui.with_layout(gallery_layout, |ui| {
         ui.spacing_mut().item_spacing = vec2(18.0, 0.0);
         for (label, template) in TEMPLATES.into_iter().take(HOME_TEMPLATES) {
             template_tile(ui, app, label, template);
@@ -346,7 +358,12 @@ fn new_page(app: &mut WordApp, ui: &mut Ui) {
         ui.label(egui::RichText::new(tl!("No templates match your search.")).color(t.text_dim));
         return;
     }
-    ui.horizontal_wrapped(|ui| {
+    let wrapped_layout = if crate::i18n::is_rtl() {
+        egui::Layout::right_to_left(egui::Align::Min).with_main_wrap(true)
+    } else {
+        egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true)
+    };
+    ui.with_layout(wrapped_layout, |ui| {
         ui.spacing_mut().item_spacing = vec2(18.0, 18.0);
         for (label, template) in found {
             template_tile(ui, app, label, template);
